@@ -1,0 +1,219 @@
+import { useState } from "react";
+import Scoreboard from "../shared/Scoreboard";
+import TimerDisplay from "../shared/TimerDisplay";
+import PointAdjuster from "./PointAdjuster";
+import CsvEditor from "./CsvEditor";
+import BuzzValidationModal from "./BuzzValidationModal";
+import { MANCHE_LABELS } from "../../config";
+
+export default function HostDashboard({ state, send, roomCode, connected, reconnecting }) {
+  const [timerConfig, setTimerConfig] = useState(state?.timer_seconds ?? 10);
+
+  if (!state) {
+    return (
+      <div className="container centré">
+        <div className="spinner" />
+        <p className="sous-titre">Connexion au serveur…</p>
+      </div>
+    );
+  }
+
+  const {
+    phase,
+    current_manche,
+    question_index,
+    question_total,
+    timer_seconds,
+    timer_remaining,
+    frozen_points,
+    current_question,
+    teams,
+    buzzer_team,
+    answers,
+    countdown_seconds,
+  } = state;
+
+  const showBuzzModal = phase === "buzzer_locked" && buzzer_team;
+
+  function hostAction(action, extra = {}) {
+    send({ type: "host_action", action, ...extra });
+  }
+
+  function applyConfig() {
+    hostAction("set_config", { timer_seconds: timerConfig });
+  }
+
+  function validateBuzz(correct, claim) {
+    hostAction("validate_buzz", { correct, claim });
+  }
+
+  return (
+    <div className="container host-container fade-in">
+      <header className="header host-header">
+        <div>
+          <h1 className="app-titre">🎙️ Dashboard MJ</h1>
+          <p className="host-code">
+            Code salle : <strong>{roomCode}</strong>
+            {!connected && <span className="badge-warn"> Déconnecté</span>}
+            {reconnecting && <span className="badge-warn"> Reconnexion…</span>}
+          </p>
+        </div>
+        <span className="compteur">
+          Manche {current_manche} — {MANCHE_LABELS[current_manche]}
+        </span>
+      </header>
+
+      <div className="host-grid">
+        <main className="host-main">
+          {/* Config */}
+          {phase === "lobby" && (
+            <section className="panel">
+              <h3 className="panel-titre">⚙️ Configuration</h3>
+              <div className="config-row">
+                <label>
+                  Timer questions (s)
+                  <input
+                    type="number"
+                    min={5}
+                    max={60}
+                    value={timerConfig}
+                    onChange={(e) => setTimerConfig(Number(e.target.value))}
+                  />
+                </label>
+                <button className="btn btn-secondaire" onClick={applyConfig}>
+                  Appliquer
+                </button>
+              </div>
+              <p className="sous-titre">
+                {teams.length} équipe{teams.length !== 1 ? "s" : ""} connectée
+                {teams.length !== 1 ? "s" : ""}
+              </p>
+              {current_manche === 1 && question_index === 0 && phase === "lobby" && (
+                <button className="btn btn-primaire btn-large" onClick={() => hostAction("start_game")}>
+                  🚀 Lancer la partie
+                </button>
+              )}
+              {phase === "lobby" && current_manche > 1 && (
+                <button className="btn btn-primaire btn-large" onClick={() => hostAction("start_countdown")}>
+                  ▶️ Démarrer la manche {current_manche}
+                </button>
+              )}
+            </section>
+          )}
+
+          {/* Phase display */}
+          {phase === "countdown" && (
+            <section className="panel panel-centré">
+              <h2 className="phase-titre">Départ dans…</h2>
+              <TimerDisplay
+                remaining={timer_remaining}
+                total={countdown_seconds}
+                variant="countdown"
+              />
+            </section>
+          )}
+
+          {(phase === "active" || phase === "buzzer_locked" || phase === "reveal") && current_question && (
+            <section className="panel">
+              <div className="question-header">
+                <span className="numéro-question">
+                  Q{question_index + 1}/{question_total} — Manche {current_manche}
+                </span>
+                {(current_manche === 2 || current_manche === 4) && phase === "active" && (
+                  <TimerDisplay
+                    remaining={timer_remaining}
+                    total={timer_seconds}
+                    variant={current_manche === 4 ? "final" : "speed"}
+                  />
+                )}
+                {current_manche === 4 && phase === "active" && (
+                  <div className="points-counter">
+                    Points en jeu : <strong>{frozen_points ?? 1}</strong>
+                  </div>
+                )}
+              </div>
+              <h2 className="texte-question">{current_question.question}</h2>
+              {current_question.options?.length > 0 && (
+                <ul className="liste-options host-options">
+                  {current_question.options.map((opt) => (
+                    <li key={opt} className={opt === current_question.reponse_correcte ? "correct-hint" : ""}>
+                      {opt}
+                      {opt === current_question.reponse_correcte && " ✓"}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {buzzer_team && (
+                <div className="buzz-alert">
+                  🔔 <strong>{buzzer_team.name}</strong> a buzzé !
+                  {buzzer_team.claim && ` (${buzzer_team.claim})`}
+                </div>
+              )}
+              {Object.keys(answers || {}).length > 0 && (
+                <div className="answers-log">
+                  <h4>Réponses reçues</h4>
+                  {Object.values(answers).map((a) => (
+                    <p key={a.team_id} className={a.correct ? "answer-ok" : "answer-ko"}>
+                      {a.name}: {a.answer} → {a.points} pts
+                    </p>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
+
+          {phase === "manche_end" && (
+            <section className="panel panel-centré">
+              <h2 className="phase-titre">Fin de la manche {current_manche}</h2>
+              <button className="btn btn-primaire btn-large" onClick={() => hostAction("next_manche")}>
+                Manche suivante →
+              </button>
+            </section>
+          )}
+
+          {phase === "game_end" && (
+            <section className="panel panel-centré">
+              <h2 className="titre-résultat">🏆 Partie terminée !</h2>
+              <Scoreboard teams={teams} />
+            </section>
+          )}
+
+          {/* Controls */}
+          <section className="panel host-controls">
+            <h3 className="panel-titre">🎮 Contrôles</h3>
+            <div className="controls-grid">
+              {phase === "reveal" && (
+                <button className="btn btn-primaire" onClick={() => hostAction("next_question")}>
+                  Question suivante →
+                </button>
+              )}
+              {(phase === "active" || phase === "buzzer_locked") && (
+                <button className="btn btn-secondaire" onClick={() => hostAction("skip_question")}>
+                  Passer la question
+                </button>
+              )}
+            </div>
+          </section>
+        </main>
+
+        <aside className="host-sidebar">
+          <section className="panel">
+            <h3 className="panel-titre">📊 Classement</h3>
+            <Scoreboard teams={teams} highlightId={buzzer_team?.team_id} />
+          </section>
+          <PointAdjuster teams={teams} send={send} />
+          <CsvEditor send={send} />
+        </aside>
+      </div>
+
+      {showBuzzModal && (
+        <BuzzValidationModal
+          buzzerTeam={buzzer_team}
+          manche={current_manche}
+          frozenPoints={frozen_points}
+          onValidate={validateBuzz}
+        />
+      )}
+    </div>
+  );
+}
