@@ -14,17 +14,19 @@ from fastapi.staticfiles import StaticFiles
 from pydantic.v1 import BaseModel, Field, validator
 
 # ── Config ────────────────────────────────────────────────────────────────────
-CSV_PATH = os.path.join(os.path.dirname(__file__), "questions.csv")
-CSV_FIELDS = [
-    "id",
-    "question",
-    "option_a",
-    "option_b",
-    "option_c",
-    "option_d",
-    "reponse_correcte",
-    "manche",
+QUESTIONS_DIR = os.path.join(os.path.dirname(__file__), "questions")
+MANCHE_CSV = {
+    1: "manche1.csv",
+    2: "manche2.csv",
+    3: "manche3.csv",
+    4: "manche4.csv",
+}
+STANDARD_FIELDS = [
+    "id", "question", "option_a", "option_b", "option_c", "option_d", "reponse_correcte",
 ]
+FINAL_FIELDS = ["id", "question", "reponse_correcte"]
+FINAL_TIMER_SECONDS = 20
+PART_REVEAL_INTERVAL = 5
 
 ROUND3_REWARDS = {"cash": 10, "carre": 6, "duo": 2}
 ROUND3_PENALTIES = {"cash": -2, "carre": -6, "duo": -8}
@@ -38,25 +40,23 @@ STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 class Question(BaseModel):
     id: int
     question: str
-    options: List[str]
+    parts: List[str] = []
+    options: List[str] = []
     reponse_correcte: str
     manche: int
 
 
 class QuestionCreate(BaseModel):
-    question: str
+    question: str = ""
+    partie1: str = ""
+    partie2: str = ""
+    partie3: str = ""
     option_a: str = ""
     option_b: str = ""
     option_c: str = ""
     option_d: str = ""
     reponse_correcte: str = ""
     manche: int = Field(..., ge=1, le=4)
-
-    @validator("question")
-    def question_not_empty(cls, v: str) -> str:
-        if not v.strip():
-            raise ValueError("La question ne peut pas être vide")
-        return v.strip()
 
 
 class GamePhase(str, Enum):
@@ -70,70 +70,143 @@ class GamePhase(str, Enum):
 
 
 # ── CSV helpers ───────────────────────────────────────────────────────────────
-def load_questions() -> List[Question]:
-    if not os.path.exists(CSV_PATH):
-        raise HTTPException(status_code=500, detail="Fichier questions.csv introuvable")
+def csv_path_for_manche(manche: int) -> str:
+    filename = MANCHE_CSV.get(manche)
+    if not filename:
+        raise HTTPException(status_code=400, detail="Manche invalide")
+    return os.path.join(QUESTIONS_DIR, filename)
+
+
+def _parse_standard_row(row: dict, manche: int) -> Question:
+    options = [
+        row.get("option_a", ""),
+        row.get("option_b", ""),
+        row.get("option_c", ""),
+        row.get("option_d", ""),
+    ]
+    return Question(
+        id=int(row["id"]),
+        question=row["question"],
+        parts=[],
+        options=[o for o in options if o],
+        reponse_correcte=row.get("reponse_correcte", ""),
+        manche=manche,
+    )
+
+
+def split_by_periods(text: str) -> List[str]:
+    """Découpe une question en parties (du début ou fin de la précédente jusqu'au prochain point)."""
+    text = text.strip()
+    if not text:
+        return []
+    segments = [s.strip() for s in text.split(".") if s.strip()]
+    return [f"{s}." for s in segments]
+
+
+def _parse_final_row(row: dict) -> Question:
+    full = row.get("question", "").strip()
+    if not full:
+        legacy = [
+            row.get("partie1", "").strip(),
+            row.get("partie2", "").strip(),
+            row.get("partie3", "").strip(),
+        ]
+        full = " ".join(p for p in legacy if p)
+    parts = split_by_periods(full)
+    return Question(
+        id=int(row["id"]),
+        question=parts[0] if parts else full,
+        parts=parts,
+        options=[],
+        reponse_correcte=row.get("reponse_correcte", ""),
+        manche=4,
+    )
+
+
+def load_questions_for_manche(manche: int) -> List[Question]:
+    path = csv_path_for_manche(manche)
+    if not os.path.exists(path):
+        return []
 
     questions: List[Question] = []
-    with open(CSV_PATH, newline="", encoding="utf-8") as f:
+    with open(path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            options = [
-                row.get("option_a", ""),
-                row.get("option_b", ""),
-                row.get("option_c", ""),
-                row.get("option_d", ""),
-            ]
-            questions.append(
-                Question(
-                    id=int(row["id"]),
-                    question=row["question"],
-                    options=[o for o in options if o],
-                    reponse_correcte=row.get("reponse_correcte", ""),
-                    manche=int(row.get("manche", 1)),
-                )
-            )
+            if manche == 4:
+                questions.append(_parse_final_row(row))
+            else:
+                questions.append(_parse_standard_row(row, manche))
     return questions
 
 
+def load_questions() -> List[Question]:
+    all_q: List[Question] = []
+    for m in MANCHE_CSV:
+        all_q.extend(load_questions_for_manche(m))
+    return all_q
+
+
 def append_question_to_csv(data: QuestionCreate) -> Question:
-    questions = load_questions()
-    next_id = max((q.id for q in questions), default=0) + 1
+    path = csv_path_for_manche(data.manche)
+    existing = load_questions_for_manche(data.manche)
+    next_id = max((q.id for q in existing), default=0) + 1
 
-    row = {
-        "id": str(next_id),
-        "question": data.question,
-        "option_a": data.option_a,
-        "option_b": data.option_b,
-        "option_c": data.option_c,
-        "option_d": data.option_d,
-        "reponse_correcte": data.reponse_correcte,
-        "manche": str(data.manche),
-    }
+    os.makedirs(QUESTIONS_DIR, exist_ok=True)
 
-    file_exists = os.path.exists(CSV_PATH) and os.path.getsize(CSV_PATH) > 0
-    with open(CSV_PATH, "a", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=CSV_FIELDS)
+    if data.manche == 4:
+        full = data.question.strip() or data.partie1.strip()
+        if not full:
+            raise HTTPException(status_code=400, detail="Question requise pour la manche 4")
+        row = {
+            "id": str(next_id),
+            "question": full,
+            "reponse_correcte": data.reponse_correcte,
+        }
+        fields = FINAL_FIELDS
+        parts = split_by_periods(full)
+        question = Question(
+            id=next_id,
+            question=parts[0] if parts else full,
+            parts=parts,
+            options=[],
+            reponse_correcte=data.reponse_correcte,
+            manche=4,
+        )
+    else:
+        if not data.question.strip():
+            raise HTTPException(status_code=400, detail="Question requise")
+        row = {
+            "id": str(next_id),
+            "question": data.question.strip(),
+            "option_a": data.option_a,
+            "option_b": data.option_b,
+            "option_c": data.option_c,
+            "option_d": data.option_d,
+            "reponse_correcte": data.reponse_correcte,
+        }
+        fields = STANDARD_FIELDS
+        options = [o for o in [data.option_a, data.option_b, data.option_c, data.option_d] if o]
+        question = Question(
+            id=next_id,
+            question=data.question.strip(),
+            parts=[],
+            options=options,
+            reponse_correcte=data.reponse_correcte,
+            manche=data.manche,
+        )
+
+    file_exists = os.path.exists(path) and os.path.getsize(path) > 0
+    with open(path, "a", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fields)
         if not file_exists:
             writer.writeheader()
         writer.writerow(row)
 
-    options = [o for o in [data.option_a, data.option_b, data.option_c, data.option_d] if o]
-    return Question(
-        id=next_id,
-        question=data.question,
-        options=options,
-        reponse_correcte=data.reponse_correcte,
-        manche=data.manche,
-    )
+    return question
 
 
 def questions_by_manche() -> Dict[int, List[Question]]:
-    grouped: Dict[int, List[Question]] = {1: [], 2: [], 3: [], 4: []}
-    for q in load_questions():
-        if q.manche in grouped:
-            grouped[q.manche].append(q)
-    return grouped
+    return {m: load_questions_for_manche(m) for m in MANCHE_CSV}
 
 
 def speed_round_points(timer_total: float, time_left: float) -> int:
@@ -209,6 +282,10 @@ class GameRoom:
         self.buzzer_team_id: Optional[str] = None
         self.buzzer_claim: Optional[str] = None
         self.answers_this_question: Dict[str, dict] = {}
+        self.show_correction: bool = False
+        self.part_reveal_interval: float = PART_REVEAL_INTERVAL
+        self.revealed_parts_count: int = 0
+        self.frozen_revealed_parts: Optional[int] = None
         self._lock = asyncio.Lock()
 
     @property
@@ -222,6 +299,9 @@ class GameRoom:
         self.buzzer_team_id = None
         self.buzzer_claim = None
         self.frozen_points = None
+        self.show_correction = False
+        self.revealed_parts_count = 0
+        self.frozen_revealed_parts = None
         self.timer_started_at = None
         self.timer_remaining = float(self.timer_seconds)
         self.answers_this_question = {}
@@ -236,21 +316,41 @@ class GameRoom:
             self.timer_task.cancel()
         self.timer_task = None
 
+    def _visible_parts_count(self) -> int:
+        q = self.current_question
+        if not q or not q.parts:
+            return 0
+        if self.current_manche != 4:
+            return len(q.parts)
+        if self.phase in (GamePhase.BUZZER_LOCKED, GamePhase.REVEAL):
+            return self.frozen_revealed_parts or self.revealed_parts_count or 1
+        if self.phase == GamePhase.ACTIVE:
+            return max(1, self.revealed_parts_count)
+        return len(q.parts)
+
     async def broadcast(self, manager: "ConnectionManager"):
         await manager.broadcast_room(self.room_code, {"type": "state", "payload": self.public_state()})
 
     def public_state(self, role: str = "all", team_id: Optional[str] = None) -> dict:
         q_data = None
         if self.current_question:
+            q = self.current_question
             q_data = {
-                "id": self.current_question.id,
-                "question": self.current_question.question,
-                "manche": self.current_question.manche,
+                "id": q.id,
+                "question": q.question,
+                "manche": q.manche,
             }
-            if self.current_manche in (1, 2):
-                q_data["options"] = self.current_question.options
-            if role == "host" or self.phase in (GamePhase.REVEAL, GamePhase.MANCHE_END, GamePhase.GAME_END):
-                q_data["reponse_correcte"] = self.current_question.reponse_correcte
+            if q.parts:
+                visible_count = self._visible_parts_count()
+                q_data["parts"] = q.parts[:visible_count]
+                q_data["total_parts"] = len(q.parts)
+                q_data["revealed_parts_count"] = visible_count
+            if self.current_manche in (1, 2) and role == "team":
+                q_data["options"] = q.options
+            elif role == "host" and self.current_manche in (1, 2, 3):
+                q_data["options"] = q.options
+            if role == "host" and self.show_correction:
+                q_data["reponse_correcte"] = q.reponse_correcte
 
         buzzer_team = None
         if self.buzzer_team_id and self.buzzer_team_id in self.teams:
@@ -269,10 +369,12 @@ class GameRoom:
             "countdown_seconds": self.countdown_seconds,
             "timer_remaining": round(self.timer_remaining, 2),
             "frozen_points": self.frozen_points,
+            "part_reveal_interval": self.part_reveal_interval,
             "current_question": q_data,
             "teams": [t.to_dict() for t in teams_sorted],
             "buzzer_team": buzzer_team,
             "answers": self.answers_this_question if role == "host" else {},
+            "show_correction": self.show_correction if role == "host" else False,
             "manche_labels": {
                 1: "Classique Q&R",
                 2: "Partie Rapidité",
@@ -314,6 +416,9 @@ class GameRoom:
 
         self.current_question = questions[self.question_index]
         self.reset_question_state()
+        if self.current_manche == 4:
+            self.timer_seconds = FINAL_TIMER_SECONDS
+            self.part_reveal_interval = PART_REVEAL_INTERVAL
         await self.set_phase(GamePhase.ACTIVE, manager)
 
         if self.current_manche in (2, 4):
@@ -323,10 +428,14 @@ class GameRoom:
         self.cancel_timer()
         self.timer_started_at = time.monotonic()
         self.timer_remaining = float(self.timer_seconds)
+        if self.current_manche == 4:
+            self.revealed_parts_count = 1 if self.current_question and self.current_question.parts else 0
+            self.frozen_revealed_parts = None
         self.timer_task = asyncio.create_task(self._timer_loop(manager))
 
     async def _timer_loop(self, manager: "ConnectionManager"):
         try:
+            last_revealed = self.revealed_parts_count
             tick = 0
             while self.timer_remaining > 0 and self.phase == GamePhase.ACTIVE:
                 await asyncio.sleep(0.1)
@@ -334,12 +443,21 @@ class GameRoom:
                 self.timer_remaining = max(0.0, self.timer_seconds - elapsed)
 
                 if self.current_manche == 4 and self.phase == GamePhase.ACTIVE:
-                    self.frozen_points = final_round_points(
-                        self.timer_seconds, elapsed
-                    )
+                    self.frozen_points = final_round_points(self.timer_seconds, elapsed)
+                    if self.current_question and self.current_question.parts:
+                        n = len(self.current_question.parts)
+                        self.revealed_parts_count = min(
+                            n, 1 + int(elapsed // self.part_reveal_interval)
+                        )
 
                 tick += 1
-                if tick % 5 == 0:
+                part_changed = (
+                    self.current_manche == 4
+                    and self.revealed_parts_count != last_revealed
+                )
+                if part_changed:
+                    last_revealed = self.revealed_parts_count
+                if part_changed or tick % 5 == 0:
                     await self.broadcast(manager)
 
             if self.phase == GamePhase.ACTIVE and self.current_manche in (2, 4):
@@ -367,6 +485,9 @@ class GameRoom:
             self.current_manche += 1
             self.question_index = 0
             self.questions = questions_by_manche()
+            if self.current_manche == 4 and self.timer_seconds != FINAL_TIMER_SECONDS:
+                self.timer_seconds = FINAL_TIMER_SECONDS
+                self.part_reveal_interval = PART_REVEAL_INTERVAL
             await self.set_phase(GamePhase.LOBBY, manager)
 
     async def handle_team_answer(self, team_id: str, answer: str, manager: "ConnectionManager"):
@@ -421,6 +542,7 @@ class GameRoom:
             if self.current_manche == 4:
                 elapsed = time.monotonic() - (self.timer_started_at or time.monotonic())
                 self.frozen_points = final_round_points(self.timer_seconds, elapsed)
+                self.frozen_revealed_parts = self.revealed_parts_count or 1
 
             await self.set_phase(GamePhase.BUZZER_LOCKED, manager)
 
@@ -695,6 +817,10 @@ class ConnectionManager:
 
         elif action == "reload_questions":
             room.questions = questions_by_manche()
+            await room.broadcast(self)
+
+        elif action == "show_correction":
+            room.show_correction = True
             await room.broadcast(self)
 
 
