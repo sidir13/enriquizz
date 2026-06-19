@@ -29,7 +29,7 @@ export default function RoundOralBuzzer({
       {!lockedOut && phase === "active" && (
         <div className="buzzer-zone buzzer-zone-centered">
           <button className="buzzer-btn" onClick={() => onBuzz(null)}>
-            BUZZER
+          🔥
           </button>
         </div>
       )}
