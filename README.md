@@ -9,8 +9,8 @@ enriquizz/
 ├── frontend/          # React (Vite) — build → backend/static/
 ├── backend/
 │   ├── main.py        # API REST + WebSocket + fichiers statiques
-│   ├── static/        # Frontend compilé (généré par npm run build)
-│   └── questions.csv
+│   ├── questions/     # Un CSV par manche (manche1.csv … manche4.csv)
+│   └── static/        # Frontend compilé (généré par npm run build)
 └── render.yaml        # Blueprint Render (optionnel)
 ```
 

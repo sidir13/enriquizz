@@ -1,15 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getWsUrl } from "../config";
 
-const RECONNECT_DELAY_MS = 2000;
-const MAX_RECONNECT_DELAY_MS = 15000;
-
 export function useWebSocket({ enabled = true, onMessage, onOpen, onClose }) {
   const wsRef = useRef(null);
-  const reconnectTimer = useRef(null);
-  const reconnectAttempt = useRef(0);
   const mounted = useRef(true);
   const handlersRef = useRef({ onMessage, onOpen, onClose });
+  const connectedConfirmed = useRef(false);
+  const connectRef = useRef(null);
+  const disconnectRef = useRef(null);
 
   const [connected, setConnected] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
@@ -24,39 +22,51 @@ export function useWebSocket({ enabled = true, onMessage, onOpen, onClose }) {
     return false;
   }, []);
 
-  const clearReconnectTimer = useCallback(() => {
-    if (reconnectTimer.current) {
-      clearTimeout(reconnectTimer.current);
-      reconnectTimer.current = null;
-    }
-  }, []);
-
   const connect = useCallback(() => {
     if (!enabled || !mounted.current) return;
 
-    clearReconnectTimer();
+    if (wsRef.current) {
+      const old = wsRef.current;
+      wsRef.current = null;
+      old.onclose = null;
+      old.onerror = null;
+      if (old.readyState === WebSocket.OPEN || old.readyState === WebSocket.CONNECTING) {
+        old.close(1000, "Reconnecting");
+      }
+    }
+
+    connectedConfirmed.current = false;
 
     const ws = new WebSocket(getWsUrl());
     wsRef.current = ws;
 
     ws.onopen = () => {
       if (!mounted.current) return;
-      reconnectAttempt.current = 0;
-      setConnected(true);
+      console.log("[WS] onopen");
       setReconnecting(false);
-      const sendFn = (payload) => {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify(payload));
-          return true;
-        }
-        return false;
-      };
-      handlersRef.current.onOpen?.(sendFn);
+      // Do NOT set connected=true here; wait for server ack
     };
 
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+        console.log("[WS] onmessage:", data);
+
+        // First message should be "connected" from server
+        if (data.type === "connected" && !connectedConfirmed.current) {
+          connectedConfirmed.current = true;
+          setConnected(true);
+          const sendFn = (payload) => {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify(payload));
+              return true;
+            }
+            return false;
+          };
+          handlersRef.current.onOpen?.(sendFn);
+          return;
+        }
+
         handlersRef.current.onMessage?.(data);
       } catch {
         /* ignore malformed payloads */
@@ -65,46 +75,48 @@ export function useWebSocket({ enabled = true, onMessage, onOpen, onClose }) {
 
     ws.onclose = () => {
       if (!mounted.current) return;
+      console.log("[WS] onclose");
       setConnected(false);
+      connectedConfirmed.current = false;
       wsRef.current = null;
       handlersRef.current.onClose?.();
-
-      if (enabled) {
-        setReconnecting(true);
-        const delay = Math.min(
-          RECONNECT_DELAY_MS * 2 ** reconnectAttempt.current,
-          MAX_RECONNECT_DELAY_MS
-        );
-        reconnectAttempt.current += 1;
-        reconnectTimer.current = setTimeout(connect, delay);
-      }
     };
 
-    ws.onerror = () => {
+    ws.onerror = (event) => {
+      console.error("[WS] onerror:", event);
       ws.close();
     };
-  }, [enabled, clearReconnectTimer]);
+  }, [enabled]);
 
   const disconnect = useCallback(() => {
-    clearReconnectTimer();
-    reconnectAttempt.current = 0;
-    if (wsRef.current) {
-      wsRef.current.onclose = null;
-      wsRef.current.close();
-      wsRef.current = null;
+    connectedConfirmed.current = false;
+    const ws = wsRef.current;
+    if (!ws) {
+      setConnected(false);
+      setReconnecting(false);
+      return;
+    }
+    wsRef.current = null;
+    ws.onclose = null;
+    ws.onerror = null;
+    if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+      ws.close(1000, "Client disconnect");
     }
     setConnected(false);
     setReconnecting(false);
-  }, [clearReconnectTimer]);
+  }, []);
+
+  connectRef.current = connect;
+  disconnectRef.current = disconnect;
 
   useEffect(() => {
     mounted.current = true;
-    if (enabled) connect();
+    if (enabled) connectRef.current?.();
     return () => {
       mounted.current = false;
-      disconnect();
+      disconnectRef.current?.();
     };
-  }, [enabled, connect, disconnect]);
+  }, [enabled]);
 
   useEffect(() => {
     if (!enabled || !connected) return;

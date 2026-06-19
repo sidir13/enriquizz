@@ -79,18 +79,38 @@ def csv_path_for_manche(manche: int) -> str:
 
 
 def _parse_standard_row(row: dict, manche: int) -> Question:
+    row_id_str = row.get("id", "").strip()
+    if not row_id_str:
+        return None
+    
+    try:
+        row_id = int(row_id_str)
+    except ValueError:
+        return None
+    
+    question_text = row.get("question", "").strip()
+    reponse = row.get("reponse_correcte", "").strip()
+    
+    if not question_text or not reponse:
+        return None
+    
     options = [
-        row.get("option_a", ""),
-        row.get("option_b", ""),
-        row.get("option_c", ""),
-        row.get("option_d", ""),
+        row.get("option_a", "").strip(),
+        row.get("option_b", "").strip(),
+        row.get("option_c", "").strip(),
+        row.get("option_d", "").strip(),
     ]
+    options_filled = [o for o in options if o]
+    
+    if len(options_filled) < 2:
+        return None
+    
     return Question(
-        id=int(row["id"]),
-        question=row["question"],
+        id=row_id,
+        question=question_text,
         parts=[],
-        options=[o for o in options if o],
-        reponse_correcte=row.get("reponse_correcte", ""),
+        options=options_filled,
+        reponse_correcte=reponse,
         manche=manche,
     )
 
@@ -105,21 +125,28 @@ def split_by_periods(text: str) -> List[str]:
 
 
 def _parse_final_row(row: dict) -> Question:
+    row_id_str = row.get("id", "").strip()
+    if not row_id_str:
+        return None
+    
+    try:
+        row_id = int(row_id_str)
+    except ValueError:
+        return None
+    
     full = row.get("question", "").strip()
-    if not full:
-        legacy = [
-            row.get("partie1", "").strip(),
-            row.get("partie2", "").strip(),
-            row.get("partie3", "").strip(),
-        ]
-        full = " ".join(p for p in legacy if p)
+    reponse = row.get("reponse_correcte", "").strip()
+    
+    if not full or not reponse:
+        return None
+    
     parts = split_by_periods(full)
     return Question(
-        id=int(row["id"]),
+        id=row_id,
         question=parts[0] if parts else full,
         parts=parts,
         options=[],
-        reponse_correcte=row.get("reponse_correcte", ""),
+        reponse_correcte=reponse,
         manche=4,
     )
 
@@ -133,10 +160,18 @@ def load_questions_for_manche(manche: int) -> List[Question]:
     with open(path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            if manche == 4:
-                questions.append(_parse_final_row(row))
-            else:
-                questions.append(_parse_standard_row(row, manche))
+            try:
+                if manche == 4:
+                    q = _parse_final_row(row)
+                else:
+                    q = _parse_standard_row(row, manche)
+                
+                if q:
+                    questions.append(q)
+            except Exception as e:
+                print(f"WARNING: erreur lors du parsing de la ligne: {row}, error: {e}")
+                continue
+    
     return questions
 
 
@@ -655,6 +690,7 @@ class ConnectionManager:
 
     async def connect(self, ws: WebSocket):
         await ws.accept()
+        await ws.send_json({"type": "connected"})
 
     def register_host(self, ws: WebSocket, room: GameRoom):
         room.host_ws = ws

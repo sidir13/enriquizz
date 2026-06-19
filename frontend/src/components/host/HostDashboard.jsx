@@ -5,6 +5,7 @@ import PointAdjuster from "./PointAdjuster";
 import CsvEditor from "./CsvEditor";
 import BuzzValidationModal from "./BuzzValidationModal";
 import Round3HostValidation from "./Round3HostValidation";
+import RoundOralHostValidation from "./RoundOralHostValidation";
 import ProgressiveQuestion from "../shared/ProgressiveQuestion";
 import { MANCHE_LABELS } from "../../config";
 
@@ -15,7 +16,13 @@ export default function HostDashboard({ state, send, roomCode, connected, reconn
     return (
       <div className="container centré">
         <div className="spinner" />
-        <p className="sous-titre">Connexion au serveur…</p>
+        <p className="sous-titre">
+          {!connected
+            ? "Connexion au serveur…"
+            : roomCode
+              ? `Salle ${roomCode} — synchronisation…`
+              : "Création de la salle…"}
+        </p>
       </div>
     );
   }
@@ -131,7 +138,7 @@ export default function HostDashboard({ state, send, roomCode, connected, reconn
                 <span className="numéro-question">
                   Q{question_index + 1}/{question_total} — Manche {current_manche}
                 </span>
-                {(current_manche === 2 || current_manche === 4) && phase === "active" && (
+                {(current_manche === 1 || current_manche === 4) && phase === "active" && (
                   <TimerDisplay
                     remaining={timer_remaining}
                     total={timer_seconds}
@@ -158,13 +165,19 @@ export default function HostDashboard({ state, send, roomCode, connected, reconn
                 <h2 className="texte-question">{current_question.question}</h2>
               )}
 
-              {current_manche === 3 && (
+              {current_manche === 2 && (
                 <p className="sous-titre host-mj-hint">
                   Lisez la proposition à l&apos;oral. Les options Duo / Carré / Cash apparaissent après un buzz.
                 </p>
               )}
 
-              {current_manche === 3 && phase === "buzzer_locked" && buzzer_team && (
+              {current_manche === 3 && (
+                <p className="sous-titre host-mj-hint">
+                  Les équipes voient la question et peuvent buzzer. Validez la réponse orale (+10 pts, pas de pénalité).
+                </p>
+              )}
+
+              {current_manche === 2 && phase === "buzzer_locked" && buzzer_team && (
                 <Round3HostValidation
                   buzzerTeam={buzzer_team}
                   question={current_question}
@@ -172,9 +185,16 @@ export default function HostDashboard({ state, send, roomCode, connected, reconn
                 />
               )}
 
+              {current_manche === 3 && phase === "buzzer_locked" && buzzer_team && (
+                <RoundOralHostValidation
+                  buzzerTeam={buzzer_team}
+                  onValidate={validateBuzz}
+                />
+              )}
+
               {current_manche !== 4 &&
                 current_question.options?.length > 0 &&
-                current_manche !== 3 && (
+                current_manche !== 2 && (
                   <ul className="liste-options host-options">
                     {current_question.options.map((opt) => (
                       <li key={opt}>{opt}</li>
@@ -200,7 +220,7 @@ export default function HostDashboard({ state, send, roomCode, connected, reconn
                 </div>
               )}
 
-              {buzzer_team && current_manche !== 3 && (
+              {buzzer_team && current_manche !== 2 && current_manche !== 3 && (
                 <div className="buzz-alert">
                   <strong>{buzzer_team.name}</strong> a buzzé !
                 </div>

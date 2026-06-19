@@ -1,10 +1,19 @@
-export default function RoundBuzzer({ lockedOut, buzzerTeam, myTeamId, onBuzz, phase }) {
+export default function RoundOralBuzzer({
+  question,
+  lockedOut,
+  buzzerTeam,
+  myTeamId,
+  onBuzz,
+  phase,
+}) {
   const someoneElseBuzzed =
     phase === "buzzer_locked" && buzzerTeam && buzzerTeam.team_id !== myTeamId;
   const iBuzzed = phase === "buzzer_locked" && buzzerTeam?.team_id === myTeamId;
 
   return (
-    <div className="round-buzzer">
+    <div className="round-oral-buzzer">
+      <h2 className="texte-question">{question?.question}</h2>
+
       {lockedOut && (
         <p className="locked-msg">Vous êtes verrouillé(e) pour cette question</p>
       )}
@@ -18,9 +27,9 @@ export default function RoundBuzzer({ lockedOut, buzzerTeam, myTeamId, onBuzz, p
       )}
 
       {!lockedOut && phase === "active" && (
-        <div className="buzzer-zone">
+        <div className="buzzer-zone buzzer-zone-centered">
           <button className="buzzer-btn" onClick={() => onBuzz(null)}>
-          卍
+            BUZZER
           </button>
         </div>
       )}

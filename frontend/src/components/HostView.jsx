@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { useWebSocket } from "../hooks/useWebSocket";
 import HostDashboard from "./host/HostDashboard";
 
@@ -8,7 +8,6 @@ export default function HostView({ onBack }) {
   const [roomCode, setRoomCode] = useState(null);
   const [gameState, setGameState] = useState(null);
   const [error, setError] = useState(null);
-  const createdRef = useRef(false);
 
   const handleMessage = useCallback((msg) => {
     if (msg.type === "room_created") {
@@ -25,9 +24,8 @@ export default function HostView({ onBack }) {
     const saved = sessionStorage.getItem(HOST_STORAGE_KEY);
     if (saved) {
       sendFn({ type: "host_rejoin", room_code: saved });
-    } else if (!createdRef.current) {
+    } else {
       sendFn({ type: "host_create" });
-      createdRef.current = true;
     }
   }, []);
 

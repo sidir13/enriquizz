@@ -56,7 +56,7 @@ export default function RoundFinal({
 
       {!lockedOut && phase === "active" && (
         <button className="buzzer-btn buzzer-btn-final" onClick={() => onBuzz()}>
-          BUZZER
+          ✡️
         </button>
       )}
     </div>

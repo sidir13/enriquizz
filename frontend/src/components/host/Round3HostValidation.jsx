@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ROUND3_CLAIMS } from "../../config";
+import { ROUND2_CLAIMS } from "../../config";
 
 function propositionsForClaim(claim, options) {
   if (!options?.length || !claim) return [];
@@ -17,7 +17,7 @@ export default function Round3HostValidation({ buzzerTeam, question, onValidate 
 
   if (!buzzerTeam) return null;
 
-  const claimInfo = ROUND3_CLAIMS.find((c) => c.id === selectedClaim);
+  const claimInfo = ROUND2_CLAIMS.find((c) => c.id === selectedClaim);
   const shown = propositionsForClaim(selectedClaim, question?.options);
 
   return (
@@ -27,7 +27,7 @@ export default function Round3HostValidation({ buzzerTeam, question, onValidate 
       </div>
 
       <div className="claim-select-row claim-select-large">
-        {ROUND3_CLAIMS.map((c) => (
+        {ROUND2_CLAIMS.map((c) => (
           <button
             key={c.id}
             type="button"

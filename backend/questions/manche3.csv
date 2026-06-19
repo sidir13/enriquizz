@@ -1,4 +1,11 @@
 id,question,option_a,option_b,option_c,option_d,reponse_correcte
-1,Quelle est la capitale de la France ?,Paris,Lyon,Marseille,Bordeaux,Paris
-2,Combien de continents compte la Terre ?,5,6,7,4,7
-3,Quel animal est le plus rapide du monde ?,Guépard,Lion,Autruche,Faucon pèlerin,Guépard
+1,Quel est le plus haut sommet du monde ?,L'Elbrus,L'Everest,Le Mont Blanc,L'Aconcagua,L'Everest
+2,En quelle année l'homme a-t-il marché sur la Lune ?,1965,1969,1971,1973,1969
+3,Quel est le plus grand océan du monde ?,L'Atlantique,L'Océan Indien,L'Océan Pacifique,L'Océan Arctique,L'Océan Pacifique
+4,Combien de cordes a une guitare classique ?,4,5,6,7,6
+5,Quel compositeur a écrit la Symphonie n°5 ?,Wolfgang Mozart,Ludwig van Beethoven,Georges Bizet,Gioachino Rossini,Ludwig van Beethoven
+6,En quelle année la Bastille a-t-elle été prise ?,1788,1789,1790,1791,1789
+7,Quel élément chimique a pour symbole Au ?,Argent,Or,Aluminium,Autrium,Or
+8,Combien de côtés a un octogone ?,6,7,8,9,8
+9,Quel artiste a peint la Nuit étoilée ?,Pablo Picasso,Vincent van Gogh,Claude Monet,Salvador Dalí,Vincent van Gogh
+10,Quel est le plus long fleuve du monde ?,Le Congo,Le Nil,L'Amazone,Le Yangtze,Le Nil

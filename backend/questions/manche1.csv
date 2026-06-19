@@ -1,4 +1,15 @@
 id,question,option_a,option_b,option_c,option_d,reponse_correcte
-1,En quelle année a eu lieu la Révolution française ?,1789,1799,1815,1848,1789
-2,Quel est le plus grand océan du monde ?,Atlantique,Indien,Pacifique,Arctique,Pacifique
-3,Combien de minutes dure un match de football ?,45,90,120,60,90
+1,Pourquoi le 51 dans Pastis 51 ?,Le degré d'alcool,Le département de l'usine,L'âge du créateur,L'année de création,L'année de création
+2,Combien de continents compte la Terre ?,5,6,7,4,7
+3,Que signifie le kanji de Kyoto ?,Capitale de l'Ouest,Ville Capitale,Cité du Shogun,Grande Cité,Ville Capitale
+4,"Au basket , qui détient le record du plus grand nombre de points marqués en carrière en NBA ?",Kobe Bryant,Michael Jordan,LeBron James,Olivier Giroud,LeBron James
+5,"En parler marseillais, que veut dire faire le mia ?",Frimer,Danser,Payer sa tournée au bar,Taper 2 boules d'un coup à la pétanque,Frimer
+6,"Dans Fairy Tail, comment s'appelle l'île où se déroule les examens de mage de rang s ?",Macao,Daphné,Tenro,Galuna,Tenro
+7,"Quelle fut la capitale de l'URSS, pas de la Russie ?",Saint-Pétersbourg,Vladivostok,Kiev,Moscou,Moscou
+8,Quel est l'arbre le plus présent en France ?,Le pin,Le chêne,Le sapin,Le hêtre,Le chêne
+9,"Au volley, quelle est la durée d'un temps mort ?",20 sec,1 min,30 sec,45 sec,30 sec
+10,"Dans One Piece, en quel animal se transforme l'épée de Spandam ?",En tortue,En éléphant,En crocodile,En mammouth,En éléphant
+11,Combie y a t-il d'océans dans le monde ?,4,8,5,3,5
+12,Combien existe-t-il de sommets de plus de 8 000 m d'altitude ?,14,6,27,1,14
+13,Quelle est la plus longue chaîne de montagne du monde ?,Les Alpes,L'Himalya,La Cordillère des Andes,La chaîne Transantarctique,La Cordillère des Andes
+14,"Au basket, à quelle distance est la ligne des lancers francs du panier en NBA?","3,50m","4,57m",4m,5m15,"4,57m"

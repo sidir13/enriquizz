@@ -65,10 +65,10 @@ export default function CsvEditor({ onAdded, send, currentManche = 1 }) {
             value={form.manche}
             onChange={(e) => update("manche", Number(e.target.value))}
           >
-            <option value={1}>1 — manche1.csv</option>
-            <option value={2}>2 — manche2.csv</option>
-            <option value={3}>3 — manche3.csv</option>
-            <option value={4}>4 — manche4.csv</option>
+            <option value={1}>1 — Chrono (QCM rapide)</option>
+            <option value={2}>2 — Duo / Carré / Cash</option>
+            <option value={3}>3 — Buzzer oral</option>
+            <option value={4}>4 — Question pour un champion</option>
           </select>
         </label>
 

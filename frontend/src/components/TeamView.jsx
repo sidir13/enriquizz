@@ -2,9 +2,9 @@ import { useCallback, useRef, useState } from "react";
 import { useWebSocket } from "../hooks/useWebSocket";
 import { MANCHE_LABELS } from "../config";
 import TimerDisplay from "./shared/TimerDisplay";
-import RoundClassic from "./team/RoundClassic";
 import RoundSpeed from "./team/RoundSpeed";
 import RoundBuzzer from "./team/RoundBuzzer";
+import RoundOralBuzzer from "./team/RoundOralBuzzer";
 import RoundFinal from "./team/RoundFinal";
 
 const TEAM_STORAGE_KEY = "enriquiz_team_session";
@@ -217,14 +217,6 @@ export default function TeamView({ onBack }) {
       {(phase === "active" || phase === "buzzer_locked" || phase === "reveal") && question && (
         <main className="carte team-round" key={questionKey}>
           {manche === 1 && (
-            <RoundClassic
-              question={question}
-              answered={myTeam?.answered}
-              onAnswer={handleAnswer}
-              lastPoints={myTeam?.last_points_awarded}
-            />
-          )}
-          {manche === 2 && (
             <RoundSpeed
               question={question}
               answered={myTeam?.answered}
@@ -234,8 +226,18 @@ export default function TeamView({ onBack }) {
               timerTotal={gameState.timer_seconds}
             />
           )}
-          {manche === 3 && (
+          {manche === 2 && (
             <RoundBuzzer
+              lockedOut={myTeam?.locked_out}
+              buzzerTeam={gameState.buzzer_team}
+              myTeamId={teamId}
+              onBuzz={handleBuzz}
+              phase={phase}
+            />
+          )}
+          {manche === 3 && (
+            <RoundOralBuzzer
+              question={question}
               lockedOut={myTeam?.locked_out}
               buzzerTeam={gameState.buzzer_team}
               myTeamId={teamId}

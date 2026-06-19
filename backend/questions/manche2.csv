@@ -1,4 +1,15 @@
 id,question,option_a,option_b,option_c,option_d,reponse_correcte
-1,Qui a peint la Joconde ?,Michel-Ange,Raphaël,Léonard de Vinci,Caravage,Léonard de Vinci
-2,Quel est le symbole chimique de l'or ?,Or,Au,Ag,Go,Au
-3,Quelle est la capitale de la France ?,Paris,Lyon,Marseille,Bordeaux,Paris
+1,Quelle est la mascotte de la bière la Chouffe ?,Un elfe,Un lutin,Une fée,Un grain de houblon,Un lutin
+2,Quelle personnage de bande dessinée dit : Mille milliards de mille sabords !,Astérix,Gargamel,Capitaine Haddock,John,Capitaine Haddock
+3,"Quel film a remporté l'Oscar du Meilleur Film en 2020, devenant le premier film non-anglophone à l'obtenir ?",1917,Joker,Parasite,Jojo Rabbit,Parasite
+4,Quel joueur de basket est surnommé « The Black Mamba » ?,Tracy McGrady,Allen Iverson,Franck Ribéry,Kobe Bryant,Kobe Bryant
+5,Combien pèse une balle Mikasa de championnat sénior ?,Entre 260 et 280 g,Entre 150 et 170 g,Entre 50 et 75 grammes,Entre 315 et 350 g,Entre 260 et 280 g
+6,Quel auteur Français a habité de son vivant dans une rue à son propre nom ?,Arthur Rimbaud,Victor Hugo,Jules Verne,Guillaume Musso,Victor Hugo
+7,"Sur l’emballage des Toblerone est représenté un sommet montagneux suisse, lequel ?",Le Mont Aiguille,Le Mont Blanc,Le Cervin,L’Olympe,Le Cervin
+8,Quel est le pays le moins densément peuplé du monde ?,La Russie,L’Australie,Le Danemark,La Mongolie,La Mongolie
+9,"Au début d’Haikyuu, quel est le surnom de Kageyama ?",Tobio Dictator,Le guide,Le roi,Le petit tyran,Le roi
+10,"Pour un cocktail, si je mélange du rhum blanc, de la menthe et du sucre de canne, j’obtiens ?",Un martini,Un mojito,Un tonic,Un spritz,Un mojito
+11,Quelle est la devise des Trois Mousquetaires ?,Ensemble nous sommes,Tous pour un,On joue àààà Trets,Un pour tous et tous pour un,Un pour tous et tous pour un
+12,Qui a réalisé le film Titanic (1997) ?,Steven Spielberg,Ridley Scott,Christopher Nolan,James Cameron,James Cameron
+13,"Dans 20 000 Lieues Sous les Mers, quel est nom du sous-marin du capitaine Nemo ?",Nautilus,Lincoln,Aequor,Étincelant,Nautilus
+14,"Dans les vieilles version de Minecraft, à partir de quelle couche trouvait-t-on du diamant ?",8,12,10,18,12

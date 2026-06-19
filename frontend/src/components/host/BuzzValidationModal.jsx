@@ -10,10 +10,10 @@ export default function BuzzValidationModal({ buzzerTeam, manche, frozenPoints, 
         </p>
         <div className="modal-actions">
           <button className="btn btn-vert btn-large" onClick={() => onValidate(true)}>
-            ✓ Bonne réponse (+{frozenPoints ?? "?"} pts)
+            Bonne réponse (+{frozenPoints ?? "?"} pts)
           </button>
           <button className="btn btn-rouge btn-large" onClick={() => onValidate(false)}>
-            ✗ Mauvaise réponse (verrouillage)
+            Mauvaise réponse (verrouillage)
           </button>
         </div>
       </div>
