@@ -27,7 +27,7 @@ export default function RoundFinal({
         />
         <div className="points-counter points-counter-large">
           <span className="points-label">Points en jeu</span>
-          <span className="points-value">{frozenPoints ?? 1}</span>
+          <span className="points-value">{frozenPoints ?? 10}</span>
         </div>
       </div>
 

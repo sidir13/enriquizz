@@ -2,9 +2,9 @@ export default function Landing({ onSelectRole }) {
   return (
     <div className="container centré fade-in">
       <div className="carte landing-carte">
-        <h1 className="app-titre app-titre-grand">EnriQuiz Party</h1>
+        <h1 className="app-titre app-titre-grand">EnriQuiz</h1>
         <p className="sous-titre landing-sous-titre">
-          Jeu multijoueur en temps réel — 4 manches, buzzers et scores live.
+          Si Enrico alors gros caca dans le cul.
         </p>
         <div className="landing-actions">
           <button

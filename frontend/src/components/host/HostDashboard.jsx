@@ -94,6 +94,7 @@ export default function HostDashboard({ state, send, roomCode, connected, reconn
               {current_manche === 4 && (
                 <p className="sous-titre host-mj-hint">
                   Timer 20 s — une nouvelle partie apparaît toutes les 5 s (découpée aux points).
+                  Plus la réponse est rapide, plus les points sont élevés (10 → 1).
                 </p>
               )}
               <p className="sous-titre">
@@ -139,7 +140,7 @@ export default function HostDashboard({ state, send, roomCode, connected, reconn
                 )}
                 {current_manche === 4 && phase === "active" && (
                   <div className="points-counter">
-                    Points en jeu : <strong>{frozen_points ?? 1}</strong>
+                    Points en jeu : <strong>{frozen_points ?? 10}</strong>
                   </div>
                 )}
               </div>

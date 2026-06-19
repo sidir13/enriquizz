@@ -6,9 +6,9 @@ export function getWsUrl() {
 
 export const MANCHE_LABELS = {
   1: "Classique Q&R",
-  2: "Partie Rapidité",
-  3: "Le Big Buzzer",
-  4: "Face-à-Face Final",
+  2: "Rapide et vif, comme le enrizizi",
+  3: "CASH DANS LE CUL",
+  4: "Touche ma question et devine la réponse",
 };
 
 export const ROUND3_CLAIMS = [

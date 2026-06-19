@@ -122,7 +122,7 @@ export default function TeamView({ onBack }) {
               <input
                 value={teamName}
                 onChange={(e) => setTeamName(e.target.value)}
-                placeholder="Les Champions"
+                placeholder="les valises"
                 required
               />
             </label>
