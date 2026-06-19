@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { API_URL } from "../../config";
 
 export default function CsvEditor({ onAdded, send }) {
   const [form, setForm] = useState({
@@ -23,7 +22,7 @@ export default function CsvEditor({ onAdded, send }) {
     setLoading(true);
     setStatus(null);
     try {
-      const res = await fetch(`${API_URL}/api/questions`, {
+      const res = await fetch("/api/questions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),

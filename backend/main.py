@@ -9,7 +9,8 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Set
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic.v1 import BaseModel, Field, validator
 
 # ── Config ────────────────────────────────────────────────────────────────────
@@ -25,23 +26,12 @@ CSV_FIELDS = [
     "manche",
 ]
 
-CORS_ORIGINS = os.getenv(
-    "CORS_ORIGINS",
-    "http://localhost:5173,http://localhost:4173,*",
-).split(",")
-
 ROUND3_REWARDS = {"cash": 10, "carre": 6, "duo": 2}
 ROUND3_PENALTIES = {"cash": -2, "carre": -6, "duo": -8}
 
 app = FastAPI(title="EnriQuiz Party", version="2.0.0")
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[o.strip() for o in CORS_ORIGINS if o.strip()],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
 
 
 # ── Models ────────────────────────────────────────────────────────────────────
@@ -712,11 +702,6 @@ manager = ConnectionManager()
 
 
 # ── REST routes ───────────────────────────────────────────────────────────────
-@app.get("/")
-def root():
-    return {"message": "EnriQuiz Party API", "version": "2.0.0"}
-
-
 @app.get("/api/questions", response_model=List[Question])
 def get_questions():
     return load_questions()
@@ -749,3 +734,19 @@ async def websocket_endpoint(ws: WebSocket):
         await manager.disconnect(ws)
     except Exception:
         await manager.disconnect(ws)
+
+
+# ── Static frontend (monolithe) — MUST be registered after API / WS routes ─────
+if os.path.isdir(STATIC_DIR):
+    assets_dir = os.path.join(STATIC_DIR, "assets")
+    if os.path.isdir(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    @app.get("/{catchall:path}")
+    async def serve_spa(catchall: str = ""):
+        if catchall.startswith("api") or catchall == "ws":
+            raise HTTPException(status_code=404, detail="Not found")
+        index_path = os.path.join(STATIC_DIR, "index.html")
+        if not os.path.isfile(index_path):
+            raise HTTPException(status_code=404, detail="Frontend not built. Run: cd frontend && npm run build")
+        return FileResponse(index_path)

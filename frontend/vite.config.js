@@ -1,18 +1,24 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-// ──────────────────────────────────────────────────────────────────────────────
-// En développement local, le proxy redirige /api → backend FastAPI (port 8000)
-// ce qui évite les problèmes CORS en local et évite de coder l'URL en dur.
-// En production sur Render, la variable d'env VITE_API_URL est utilisée (App.jsx)
-// ──────────────────────────────────────────────────────────────────────────────
+// En dev : Vite proxy /api et /ws vers FastAPI (port 8000).
+// En prod : le build sort dans backend/static, servi par le même processus uvicorn.
 export default defineConfig({
   plugins: [react()],
+  build: {
+    outDir: "../backend/static",
+    emptyOutDir: true,
+  },
   server: {
     port: 5173,
     proxy: {
       "/api": {
         target: "http://localhost:8000",
+        changeOrigin: true,
+      },
+      "/ws": {
+        target: "ws://localhost:8000",
+        ws: true,
         changeOrigin: true,
       },
     },

@@ -1,9 +1,7 @@
-export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
-
+/** URLs relatives — même origine en prod (monolithe) ; proxy Vite en dev. */
 export function getWsUrl() {
-  if (import.meta.env.VITE_WS_URL) return import.meta.env.VITE_WS_URL;
-  const base = API_URL.replace(/\/$/, "");
-  return base.replace(/^http/, "ws") + "/ws";
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${protocol}//${window.location.host}/ws`;
 }
 
 export const MANCHE_LABELS = {
