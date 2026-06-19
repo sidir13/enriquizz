@@ -4,6 +4,8 @@ import TimerDisplay from "../shared/TimerDisplay";
 import PointAdjuster from "./PointAdjuster";
 import CsvEditor from "./CsvEditor";
 import BuzzValidationModal from "./BuzzValidationModal";
+import Round3HostValidation from "./Round3HostValidation";
+import ProgressiveQuestion from "../shared/ProgressiveQuestion";
 import { MANCHE_LABELS } from "../../config";
 
 export default function HostDashboard({ state, send, roomCode, connected, reconnecting }) {
@@ -31,9 +33,15 @@ export default function HostDashboard({ state, send, roomCode, connected, reconn
     buzzer_team,
     answers,
     countdown_seconds,
+    show_correction,
+    part_reveal_interval,
   } = state;
 
-  const showBuzzModal = phase === "buzzer_locked" && buzzer_team;
+  const showBuzzModal = phase === "buzzer_locked" && buzzer_team && current_manche === 4;
+  const canShowCorrection =
+    current_question &&
+    (current_manche <= 3 || current_manche === 4) &&
+    phase !== "lobby";
 
   function hostAction(action, extra = {}) {
     send({ type: "host_action", action, ...extra });
@@ -51,7 +59,7 @@ export default function HostDashboard({ state, send, roomCode, connected, reconn
     <div className="container host-container fade-in">
       <header className="header host-header">
         <div>
-          <h1 className="app-titre">🎙️ Dashboard MJ</h1>
+          <h1 className="app-titre">Dashboard MJ</h1>
           <p className="host-code">
             Code salle : <strong>{roomCode}</strong>
             {!connected && <span className="badge-warn"> Déconnecté</span>}
@@ -65,17 +73,16 @@ export default function HostDashboard({ state, send, roomCode, connected, reconn
 
       <div className="host-grid">
         <main className="host-main">
-          {/* Config */}
           {phase === "lobby" && (
             <section className="panel">
-              <h3 className="panel-titre">⚙️ Configuration</h3>
+              <h3 className="panel-titre">Configuration</h3>
               <div className="config-row">
                 <label>
                   Timer questions (s)
                   <input
                     type="number"
                     min={5}
-                    max={60}
+                    max={90}
                     value={timerConfig}
                     onChange={(e) => setTimerConfig(Number(e.target.value))}
                   />
@@ -84,24 +91,28 @@ export default function HostDashboard({ state, send, roomCode, connected, reconn
                   Appliquer
                 </button>
               </div>
+              {current_manche === 4 && (
+                <p className="sous-titre host-mj-hint">
+                  Timer 20 s — une nouvelle partie apparaît toutes les 5 s (découpée aux points).
+                </p>
+              )}
               <p className="sous-titre">
                 {teams.length} équipe{teams.length !== 1 ? "s" : ""} connectée
                 {teams.length !== 1 ? "s" : ""}
               </p>
               {current_manche === 1 && question_index === 0 && phase === "lobby" && (
                 <button className="btn btn-primaire btn-large" onClick={() => hostAction("start_game")}>
-                  🚀 Lancer la partie
+                  Lancer la partie
                 </button>
               )}
               {phase === "lobby" && current_manche > 1 && (
                 <button className="btn btn-primaire btn-large" onClick={() => hostAction("start_countdown")}>
-                  ▶️ Démarrer la manche {current_manche}
+                  Démarrer la manche {current_manche}
                 </button>
               )}
             </section>
           )}
 
-          {/* Phase display */}
           {phase === "countdown" && (
             <section className="panel panel-centré">
               <h2 className="phase-titre">Départ dans…</h2>
@@ -132,23 +143,68 @@ export default function HostDashboard({ state, send, roomCode, connected, reconn
                   </div>
                 )}
               </div>
-              <h2 className="texte-question">{current_question.question}</h2>
-              {current_question.options?.length > 0 && (
-                <ul className="liste-options host-options">
-                  {current_question.options.map((opt) => (
-                    <li key={opt} className={opt === current_question.reponse_correcte ? "correct-hint" : ""}>
-                      {opt}
-                      {opt === current_question.reponse_correcte && " ✓"}
-                    </li>
-                  ))}
-                </ul>
+
+              {current_manche === 4 && current_question?.parts?.length > 0 ? (
+                <ProgressiveQuestion
+                  parts={current_question.parts}
+                  totalParts={current_question.total_parts}
+                  revealedCount={current_question.revealed_parts_count}
+                  partRevealInterval={part_reveal_interval ?? 5}
+                  timerRemaining={timer_remaining}
+                  timerTotal={timer_seconds}
+                />
+              ) : (
+                <h2 className="texte-question">{current_question.question}</h2>
               )}
-              {buzzer_team && (
-                <div className="buzz-alert">
-                  🔔 <strong>{buzzer_team.name}</strong> a buzzé !
-                  {buzzer_team.claim && ` (${buzzer_team.claim})`}
+
+              {current_manche === 3 && (
+                <p className="sous-titre host-mj-hint">
+                  Lisez la proposition à l&apos;oral. Les options Duo / Carré / Cash apparaissent après un buzz.
+                </p>
+              )}
+
+              {current_manche === 3 && phase === "buzzer_locked" && buzzer_team && (
+                <Round3HostValidation
+                  buzzerTeam={buzzer_team}
+                  question={current_question}
+                  onValidate={validateBuzz}
+                />
+              )}
+
+              {current_manche !== 4 &&
+                current_question.options?.length > 0 &&
+                current_manche !== 3 && (
+                  <ul className="liste-options host-options">
+                    {current_question.options.map((opt) => (
+                      <li key={opt}>{opt}</li>
+                    ))}
+                  </ul>
+                )}
+
+              {canShowCorrection && (
+                <div className="correction-block">
+                  {!show_correction ? (
+                    <button
+                      className="btn btn-secondaire"
+                      onClick={() => hostAction("show_correction")}
+                    >
+                      Correction
+                    </button>
+                  ) : (
+                    <div className="correction-reveal">
+                      <span className="correction-label">Bonne réponse :</span>
+                      <strong>{current_question.reponse_correcte}</strong>
+                    </div>
+                  )}
                 </div>
               )}
+
+              {buzzer_team && current_manche !== 3 && (
+                <div className="buzz-alert">
+                  <strong>{buzzer_team.name}</strong> a buzzé !
+                </div>
+              )}
+
               {Object.keys(answers || {}).length > 0 && (
                 <div className="answers-log">
                   <h4>Réponses reçues</h4>
@@ -173,14 +229,13 @@ export default function HostDashboard({ state, send, roomCode, connected, reconn
 
           {phase === "game_end" && (
             <section className="panel panel-centré">
-              <h2 className="titre-résultat">🏆 Partie terminée !</h2>
+              <h2 className="titre-résultat">Partie terminée !</h2>
               <Scoreboard teams={teams} />
             </section>
           )}
 
-          {/* Controls */}
           <section className="panel host-controls">
-            <h3 className="panel-titre">🎮 Contrôles</h3>
+            <h3 className="panel-titre">Contrôles</h3>
             <div className="controls-grid">
               {phase === "reveal" && (
                 <button className="btn btn-primaire" onClick={() => hostAction("next_question")}>
@@ -198,11 +253,11 @@ export default function HostDashboard({ state, send, roomCode, connected, reconn
 
         <aside className="host-sidebar">
           <section className="panel">
-            <h3 className="panel-titre">📊 Classement</h3>
+            <h3 className="panel-titre">Classement</h3>
             <Scoreboard teams={teams} highlightId={buzzer_team?.team_id} />
           </section>
           <PointAdjuster teams={teams} send={send} />
-          <CsvEditor send={send} />
+          <CsvEditor send={send} currentManche={current_manche} />
         </aside>
       </div>
 

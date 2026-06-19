@@ -1,4 +1,5 @@
 import TimerDisplay from "../shared/TimerDisplay";
+import ProgressiveQuestion from "../shared/ProgressiveQuestion";
 
 export default function RoundFinal({
   question,
@@ -10,6 +11,7 @@ export default function RoundFinal({
   timerRemaining,
   timerTotal,
   frozenPoints,
+  partRevealInterval,
 }) {
   const someoneElseBuzzed =
     phase === "buzzer_locked" && buzzerTeam && buzzerTeam.team_id !== myTeamId;
@@ -29,11 +31,19 @@ export default function RoundFinal({
         </div>
       </div>
 
-      <h2 className="texte-question">{question.question}</h2>
-      <p className="buzzer-hint">Écoutez le MJ et buzzez quand vous connaissez la réponse !</p>
+      {question?.parts?.length > 0 && (
+        <ProgressiveQuestion
+          parts={question.parts}
+          totalParts={question.total_parts}
+          revealedCount={question.revealed_parts_count}
+          partRevealInterval={partRevealInterval ?? 5}
+          timerRemaining={timerRemaining}
+          timerTotal={timerTotal}
+        />
+      )}
 
       {lockedOut && (
-        <p className="locked-msg">🔒 Verrouillé pour cette question</p>
+        <p className="locked-msg">Verrouillé pour cette question</p>
       )}
 
       {someoneElseBuzzed && (
@@ -41,7 +51,7 @@ export default function RoundFinal({
       )}
 
       {iBuzzed && (
-        <p className="buzz-success">Vous avez buzzé — répondez à l'oral !</p>
+        <p className="buzz-success">Vous avez buzzé — répondez à l&apos;oral !</p>
       )}
 
       {!lockedOut && phase === "active" && (

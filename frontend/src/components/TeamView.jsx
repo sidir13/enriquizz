@@ -112,7 +112,7 @@ export default function TeamView({ onBack }) {
             onBack();
           }}
         >
-          ← Retour
+          Retour
         </button>
         <div className="carte landing-carte">
           <h1 className="app-titre">Rejoindre la partie</h1>
@@ -236,7 +236,6 @@ export default function TeamView({ onBack }) {
           )}
           {manche === 3 && (
             <RoundBuzzer
-              question={question}
               lockedOut={myTeam?.locked_out}
               buzzerTeam={gameState.buzzer_team}
               myTeamId={teamId}
@@ -255,6 +254,7 @@ export default function TeamView({ onBack }) {
               timerRemaining={gameState.timer_remaining}
               timerTotal={gameState.timer_seconds}
               frozenPoints={gameState.frozen_points}
+              partRevealInterval={gameState.part_reveal_interval}
             />
           )}
           {phase === "reveal" && myTeam?.last_points_awarded > 0 && (

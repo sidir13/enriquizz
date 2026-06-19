@@ -13,7 +13,7 @@ export default function Scoreboard({ teams, highlightId }) {
           <span className="scoreboard-rang">{i + 1}</span>
           <span className="scoreboard-nom">{team.name}</span>
           <span className="scoreboard-pts">{team.score} pts</span>
-          {team.locked_out && <span className="badge-locked">🔒</span>}
+          {team.locked_out && <span className="badge-locked">Locked</span>}
         </li>
       ))}
     </ul>

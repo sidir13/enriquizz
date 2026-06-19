@@ -11,7 +11,7 @@ export default function PointAdjuster({ teams, send }) {
 
   return (
     <section className="panel">
-      <h3 className="panel-titre">⚖️ Ajustement manuel</h3>
+      <h3 className="panel-titre">Ajustement manuel</h3>
       <div className="adjuster-row">
         <select value={selected} onChange={(e) => setSelected(e.target.value)}>
           <option value="">Choisir une équipe…</option>

@@ -12,7 +12,7 @@ export const MANCHE_LABELS = {
 };
 
 export const ROUND3_CLAIMS = [
-  { id: "cash", label: "Cash", reward: "+10", penalty: "-2" },
-  { id: "carre", label: "Carré", reward: "+6", penalty: "-6" },
   { id: "duo", label: "Duo", reward: "+2", penalty: "-8" },
+  { id: "carre", label: "Carré", reward: "+6", penalty: "-6" },
+  { id: "cash", label: "Cash", reward: "+10", penalty: "-2" },
 ];

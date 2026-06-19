@@ -14,7 +14,7 @@ export default function Landing({ onSelectRole }) {
               onSelectRole("host");
             }}
           >
-            🎙️ Maître du Jeu
+            Maître du Jeu
           </button>
           <button
             className="btn btn-secondaire btn-large"
@@ -23,7 +23,7 @@ export default function Landing({ onSelectRole }) {
               onSelectRole("team");
             }}
           >
-            📱 Rejoindre une équipe
+            Rejoindre une équipe
           </button>
         </div>
       </div>
