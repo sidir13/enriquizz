@@ -28,8 +28,9 @@ FINAL_FIELDS = ["id", "question", "reponse_correcte"]
 FINAL_TIMER_SECONDS = 20
 PART_REVEAL_INTERVAL = 5
 
-ROUND3_REWARDS = {"cash": 10, "carre": 6, "duo": 2}
-ROUND3_PENALTIES = {"cash": -2, "carre": -6, "duo": -8}
+ROUND2_REWARDS = {"cash": 8, "carre": 4, "duo": 2}
+ROUND2_PENALTIES = {"cash": -2, "carre": -6, "duo": -8}
+ORAL_BUZZER_POINTS = 10
 
 app = FastAPI(title="EnriQuiz Party", version="2.0.0")
 
@@ -210,7 +211,7 @@ def questions_by_manche() -> Dict[int, List[Question]]:
 
 
 def speed_round_points(timer_total: float, time_left: float) -> int:
-    """Points for round 2: faster answers score higher (20% brackets, -2 pts, min 1)."""
+    """Points for round 1 (speed): faster answers score higher."""
     if timer_total <= 0:
         return 1
     ratio_left = max(0.0, min(1.0, time_left / timer_total))
@@ -228,11 +229,11 @@ def speed_round_points(timer_total: float, time_left: float) -> int:
 
 
 def final_round_points(timer_total: float, elapsed: float) -> int:
-    """Round 4: points grow from 1 to 10 as time runs out."""
+    """Round 4: points start at 10 and decrease to 1 as time runs out."""
     if timer_total <= 0:
-        return 10
+        return 1
     ratio = max(0.0, min(1.0, elapsed / timer_total))
-    return max(1, min(10, int(1 + ratio * 9)))
+    return max(1, min(10, int(10 - ratio * 9)))
 
 
 def generate_room_code(length: int = 5) -> str:
@@ -345,7 +346,7 @@ class GameRoom:
                 q_data["parts"] = q.parts[:visible_count]
                 q_data["total_parts"] = len(q.parts)
                 q_data["revealed_parts_count"] = visible_count
-            if self.current_manche in (1, 2) and role == "team":
+            if self.current_manche == 1 and role == "team":
                 q_data["options"] = q.options
             elif role == "host" and self.current_manche in (1, 2, 3):
                 q_data["options"] = q.options
@@ -376,10 +377,10 @@ class GameRoom:
             "answers": self.answers_this_question if role == "host" else {},
             "show_correction": self.show_correction if role == "host" else False,
             "manche_labels": {
-                1: "Classique Q&R",
-                2: "Partie Rapidité",
-                3: "Le Big Buzzer",
-                4: "Face-à-Face Final",
+                1: "Rapide et vif",
+                2: "Duo / Carré / Cash",
+                3: "Buzzer oral",
+                4: "Question pour un champion",
             },
         }
 
@@ -421,7 +422,7 @@ class GameRoom:
             self.part_reveal_interval = PART_REVEAL_INTERVAL
         await self.set_phase(GamePhase.ACTIVE, manager)
 
-        if self.current_manche in (2, 4):
+        if self.current_manche in (1, 4):
             await self.start_timer(manager)
 
     async def start_timer(self, manager: "ConnectionManager"):
@@ -460,14 +461,14 @@ class GameRoom:
                 if part_changed or tick % 5 == 0:
                     await self.broadcast(manager)
 
-            if self.phase == GamePhase.ACTIVE and self.current_manche in (2, 4):
+            if self.phase == GamePhase.ACTIVE and self.current_manche in (1, 4):
                 await self.time_up(manager)
         except asyncio.CancelledError:
             pass
 
     async def time_up(self, manager: "ConnectionManager"):
         self.cancel_timer()
-        if self.current_manche == 2:
+        if self.current_manche == 1:
             await self.set_phase(GamePhase.REVEAL, manager)
         elif self.current_manche == 4:
             await self.set_phase(GamePhase.REVEAL, manager)
@@ -492,7 +493,7 @@ class GameRoom:
 
     async def handle_team_answer(self, team_id: str, answer: str, manager: "ConnectionManager"):
         async with self._lock:
-            if self.phase != GamePhase.ACTIVE or self.current_manche not in (1, 2):
+            if self.phase != GamePhase.ACTIVE or self.current_manche != 1:
                 return
             team = self.get_team(team_id)
             if not team or team.answered:
@@ -503,13 +504,8 @@ class GameRoom:
             correct = answer == self.current_question.reponse_correcte
             points = 0
 
-            if self.current_manche == 1:
-                points = 10 if correct else 0
-            elif self.current_manche == 2:
-                if correct:
-                    points = speed_round_points(self.timer_seconds, self.timer_remaining)
-                else:
-                    points = 0
+            if correct:
+                points = speed_round_points(self.timer_seconds, self.timer_remaining)
 
             if correct:
                 team.score += points
@@ -526,7 +522,7 @@ class GameRoom:
 
     async def handle_buzz(self, team_id: str, claim: Optional[str], manager: "ConnectionManager"):
         async with self._lock:
-            if self.phase != GamePhase.ACTIVE or self.current_manche not in (3, 4):
+            if self.phase != GamePhase.ACTIVE or self.current_manche not in (2, 3, 4):
                 return
             team = self.get_team(team_id)
             if not team or team.locked_out:
@@ -536,7 +532,7 @@ class GameRoom:
                 return
 
             self.buzzer_team_id = team_id
-            self.buzzer_claim = claim if self.current_manche == 3 else None
+            self.buzzer_claim = claim if self.current_manche == 2 else None
             self.cancel_timer()
 
             if self.current_manche == 4:
@@ -558,29 +554,42 @@ class GameRoom:
 
             team = self.teams[self.buzzer_team_id]
 
-            if self.current_manche == 3:
+            if self.current_manche == 2:
                 claim_key = (claim or self.buzzer_claim or "duo").lower()
-                if claim_key not in ROUND3_REWARDS:
+                if claim_key not in ROUND2_REWARDS:
                     claim_key = "duo"
                 if correct:
-                    pts = ROUND3_REWARDS[claim_key]
+                    pts = ROUND2_REWARDS[claim_key]
                     team.score += pts
                     team.last_points_awarded = pts
                     await self.set_phase(GamePhase.REVEAL, manager)
                 else:
-                    pts = ROUND3_PENALTIES[claim_key]
+                    pts = ROUND2_PENALTIES[claim_key]
                     team.score += pts
                     team.last_points_awarded = pts
                     team.locked_out = True
                     self.buzzer_team_id = None
                     self.buzzer_claim = None
                     other_eligible = any(
-                        not t.locked_out for tid, t in self.teams.items()
+                        not t.locked_out for t in self.teams.values()
                     )
                     if other_eligible:
                         await self.set_phase(GamePhase.ACTIVE, manager)
-                        if self.current_manche == 4:
-                            await self.start_timer(manager)
+                    else:
+                        await self.set_phase(GamePhase.REVEAL, manager)
+
+            elif self.current_manche == 3:
+                if correct:
+                    team.score += ORAL_BUZZER_POINTS
+                    team.last_points_awarded = ORAL_BUZZER_POINTS
+                    await self.set_phase(GamePhase.REVEAL, manager)
+                else:
+                    team.last_points_awarded = 0
+                    team.locked_out = True
+                    self.buzzer_team_id = None
+                    other_eligible = any(not t.locked_out for t in self.teams.values())
+                    if other_eligible:
+                        await self.set_phase(GamePhase.ACTIVE, manager)
                     else:
                         await self.set_phase(GamePhase.REVEAL, manager)
 
